@@ -9,7 +9,6 @@ import os
 from io import BytesIO
 from PIL import Image
 from typing import List, Dict, Union
-import hashlib  # Import hashlib
 import base64
 
 # Logging Configuration
@@ -28,128 +27,167 @@ def encode_image(image_bytes: bytes) -> str:
     """Encodes image bytes to base64 string for HTML display."""
     return base64.b64encode(image_bytes).decode('utf-8')
 
-# 1. Custom Theme (Improved)
+# Custom Theme (Improved)
 st.set_page_config(page_title="Roblox Decal Uploader", page_icon="🎮", layout="wide")
 
-# 2. Enhanced Styling with Markdown/CSS (More Comprehensive)
+# Enhanced Styling with Markdown/CSS (More Comprehensive)
 st.markdown("""
     <style>
         /* General */
         body {
-            font-family: sans-serif;
-            background-color: #f4f4f4;
-            color: #333;
+            font-family: 'Arial', sans-serif;
+            background-color: #f8f9fa;
+            color: #343a40;
         }
         /* Header */
         .header {
-            background-color: #3498db;
+            background-color: #007bff;
             color: white;
             padding: 20px;
             border-radius: 10px;
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        .header p {
+            font-size: 1.1em;
+            color: #d1ecf1;
         }
         /* Sidebar */
         .sidebar .stButton>button {
             width: 100%;
-            margin-bottom: 10px;
-        }
-        .sidebar .stRadio>label {
-            color: #3498db;
-        }
-        /* Button */
-        .stButton>button {
-            color: #fff;
-            background-color: #2ecc71;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
+            margin-bottom: 15px;
+            background-color: #28a745;
+            border-color: #28a745;
+            color: white;
             transition: background-color 0.3s;
         }
-        .stButton>button:hover {
-            background-color: #27ae60;
+        .sidebar .stButton>button:hover {
+            background-color: #218838;
+        }
+        .sidebar .stRadio>label {
+            color: #007bff;
+            font-weight: bold;
         }
         /* Input */
         .stTextInput>label, .stTextArea>label {
-            color: #3498db;
+            color: #007bff;
+            font-weight: bold;
         }
         /* Progress Bar */
         .stProgress>div>div {
-            background-color: #3498db !important;
+            background-color: #007bff !important;
         }
         /* Alert Messages */
         .success-message {
-            color: green;
+            color: #28a745;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 10px;
+            border-radius: 5px;
             margin-top: 10px;
         }
         .error-message {
-            color: red;
+            color: #dc3545;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 10px;
+            border-radius: 5px;
             margin-top: 10px;
         }
         .info-message {
-            color: #3498db;
+            color: #007bff;
+            background-color: #cce5ff;
+            border: 1px solid #b8daff;
+            padding: 10px;
+            border-radius: 5px;
             margin-top: 10px;
         }
-
         /* Drag and Drop Area */
         .drag-and-drop-area {
-            border: 2px dashed #3498db;
+            border: 2px dashed #007bff;
             padding: 20px;
             border-radius: 5px;
             text-align: center;
             cursor: pointer;
+            margin-bottom: 20px;
+            transition: border-color 0.3s;
         }
-
+        .drag-and-drop-area:hover {
+            border-color: #0056b3;
+        }
         /* Image Preview */
         .image-preview {
             max-width: 150px;
             margin: 5px;
             border: 1px solid #ddd;
             border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+        }
+        .image-preview:hover {
+            transform: scale(1.1);
+        }
+        /* Custom Button */
+        .custom-button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        .custom-button:hover {
+            background-color: #0056b3;
+            transform: scale(1.05);
+        }
+        /* Toolbar */
+        .toolbar {
+            background-color: #343a40;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .toolbar a {
+            color: white;
+            text-decoration: none;
+            margin: 0 10px;
+            transition: color 0.3s;
+        }
+        .toolbar a:hover {
+            color: #007bff;
         }
     </style>
 """, unsafe_allow_html=True)
 
-# 3. Header Redesign
+# Toolbar
+st.markdown("""
+    <div class="toolbar">
+        <div>
+            <a href="#">Home</a>
+            <a href="#">Features</a>
+            <a href="#">About</a>
+            <a href="#">Contact</a>
+        </div>
+        <div>
+            <a href="#">Login</a>
+            <a href="#">Register</a>
+        </div>
+    </div>
+""", unsafe_allow_html=True)
+
+# Header Redesign
 st.markdown('<div class="header"><h1>Roblox Decal Mass Uploader</h1><p>Effortlessly upload decals to Roblox.</p></div>', unsafe_allow_html=True)
 
-# 4. Enhanced Sidebar with Progressive Disclosure
-with st.sidebar:
-    st.header("API & Authentication")
-
-    api_key_method = st.radio("API Key Source", ["Enter Existing Key", "Generate from Cookie"])
-
-    api_key = None
-
-    if api_key_method == "Enter Existing Key":
-        api_key = st.text_input("Enter your Roblox API Key", type="password")
-        if api_key:
-            st.markdown('<p class="success-message">API Key entered successfully!</p>', unsafe_allow_html=True)
-    else:
-        st.markdown("**Enter your .ROBLOSECURITY cookie (sensitive data)**")
-        cookie = st.text_area("Cookie value will be hidden when typing", height=100)
-        if st.button("Generate API Key from Cookie"):
-            with st.spinner("Generating API Key..."):
-                api_key = create_api_key(cookie)
-                if api_key:
-                    st.markdown('<p class="success-message">API Key generated successfully!</p>', unsafe_allow_html=True)
-                    expander = st.expander("Show API Key")
-                    with expander:
-                        st.code(api_key)
-                else:
-                    st.markdown('<p class="error-message">Failed to generate API Key. Check logs for details.</p>', unsafe_allow_html=True)
-
-    # Advanced Settings
-    with st.expander("Advanced Settings"):
-        st.markdown("## Rate Limiting")
-        rate_limit = st.slider("Requests per second", 1, 10, 5)
-        st.markdown("## Connection Pooling")
-        max_connections = st.slider("Max connections", 10, 100, 50)
-        st.markdown("## Caching")
-        cache_duration = st.slider("Cache duration (seconds)", 0, 60, 30)
-
-# 13. Improved Helper Functions
+# Helper Functions
 def get_csrf_token(cookie: str) -> str:
     headers = {"Cookie": f".ROBLOSECURITY={cookie}"}
     response = requests.post("https://auth.roblox.com/v2/logout", headers=headers)
@@ -252,60 +290,69 @@ def upload_decal(api_key: str, image_bytes: bytes, name: str, description: str, 
         return {"success": False, "error": error_message}
 
     except Exception as e:
-        error_message = f"An unexpected error occurred: {e}"
+        error_message = f"Unexpected error occurred: {e}"
         logger.exception(error_message)
         return {"success": False, "error": error_message}
 
-# 14. Main UI: Decal Upload Section
+
+# Main UI
+with st.sidebar:
+    st.header("API & Authentication")
+
+    api_key_method = st.radio("API Key Source", ["Enter Existing Key", "Generate from Cookie"])
+    api_key = None
+
+    if api_key_method == "Enter Existing Key":
+        api_key = st.text_input("Enter your Roblox API Key", type="password")
+        if api_key:
+            st.markdown('<p class="success-message">API Key entered successfully!</p>', unsafe_allow_html=True)
+    else:
+        st.markdown("**Enter your .ROBLOSECURITY cookie (sensitive data)**")
+        cookie = st.text_area("Cookie value will be hidden when typing", height=100)
+        if st.button("Generate API Key from Cookie"):
+            with st.spinner("Generating API Key..."):
+                api_key = create_api_key(cookie)
+                if api_key:
+                    st.markdown('<p class="success-message">API Key generated successfully!</p>', unsafe_allow_html=True)
+                    expander = st.expander("Show API Key")
+                    with expander:
+                        st.code(api_key)
+                else:
+                    st.markdown('<p class="error-message">Failed to generate API Key. Check logs for details.</p>', unsafe_allow_html=True)
+
+# Main Content
 st.header("Decal Upload")
 
-# Added userId input
 user_id = st.text_input("Enter User ID", value="", help="The user ID to associate with the uploaded decals.")
-
-# 15. Upload Method Selection
 upload_option = st.radio("Image Source", ["Upload Image Files", "Provide Image URLs"])
-
-# Add an image type selection
 image_type = st.selectbox("Image Type", ["image/png", "image/jpeg"])
 
-# 21. Drag and Drop Area
+# Drag and Drop Area
 st.markdown('<div class="drag-and-drop-area">Drag and drop your image files here</div>', unsafe_allow_html=True)
 
 if upload_option == "Upload Image Files":
-    # 16. Multiple File Uploader
     uploaded_files = st.file_uploader("Upload image files", accept_multiple_files=True, type=["png", "jpg", "jpeg"])
 
     if uploaded_files:
-        # 17. Dynamic Number of Uploaded Files Message
         st.success(f"Uploaded {len(uploaded_files)} images")
-
-        # 18. Image Preview Grid with Limited Display
         cols = st.columns(4)
-        for i, file in enumerate(uploaded_files[:8]):  # Show first 8 images
+        for i, file in enumerate(uploaded_files[:8]):
             with cols[i % 4]:
-                # Display image with base64 encoding
                 image_bytes = file.getvalue()
                 image_data = encode_image(image_bytes)
                 st.markdown(f'<img src="data:image/png;base64,{image_data}" class="image-preview">', unsafe_allow_html=True)
-
-        # 19. Info Message for More Files
         if len(uploaded_files) > 8:
             st.info(f"... and {len(uploaded_files) - 8} more")
 
 
 else:
-    # 20. Image URL Input Field
     image_urls = st.text_area("Enter image URLs (one per line)")
-    # 21. Preview URLs Button
     preview_button = st.button("Preview URLs")
 
     if preview_button and image_urls:
-        # 22. URL Parsing
         urls = [url.strip() for url in image_urls.split("\n") if url.strip()]
-        # 23. Number of URLs Message
         st.success(f"Found {len(urls)} URLs")
 
-        # 24. Preview URLs in a Grid
         cols = st.columns(4)
         for i, url in enumerate(urls[:8]):
             try:
@@ -323,47 +370,38 @@ else:
         if len(urls) > 8:
             st.info(f"... and {len(urls) - 8} more")
 
-# 25. Upload Settings Section
+# Upload Settings Section
 st.header("Upload Settings")
 
 col1, col2 = st.columns(2)
 with col1:
-    # 26. Naming Method Radio Buttons
     naming_option = st.radio("Naming Method", ["Use Filenames", "Custom Naming Pattern", "Custom Names List"])
 
     if naming_option == "Custom Naming Pattern":
-        # 27. Custom Naming Pattern Input
         name_pattern = st.text_input("Name Pattern (use {index} for numbering)", "My Decal {index}")
     elif naming_option == "Custom Names List":
-        # 28. Custom Names Text Area
         custom_names = st.text_area("Enter custom names (one per line)")
 
 with col2:
-    # 29. Default Description Input
     description = st.text_area("Default Description (optional)")
-    # 30. Add Delay Checkbox
     add_delay = st.checkbox("Add delay between uploads", value=True)
     if add_delay:
-        # 31. Delay Slider
         delay_seconds = st.slider("Delay in seconds", 1, 10, 3)
 
-# 32. Start Upload Button
+# Start Upload Button
+st.markdown('<button class="custom-button">Start Upload</button>', unsafe_allow_html=True)
 if st.button("Start Upload"):
     if not api_key:
-        # 33. No API Key Error Message
         st.error("Please provide a valid API key first.")
     elif not user_id:
-        # 33. No User ID Error Message
         st.error("Please provide a User ID.")
     else:
-        # 34. Initialize Progress Tracking
         progress_bar = st.progress(0)
         status_text = st.empty()
         results_container = st.container()
 
         results = []
 
-        # Determine the list of files/URLs to process
         files_to_process = []
 
         if upload_option == "Upload Image Files" and uploaded_files:
@@ -373,19 +411,15 @@ if st.button("Start Upload"):
             files_to_process = urls
 
         if not files_to_process:
-            # 35. No Files to Process Warning
             st.warning("No files or URLs to process.")
         else:
             names_list = []
             if naming_option == "Custom Names List" and custom_names:
                 names_list = [name.strip() for name in custom_names.split("\n")]
                 if len(names_list) < len(files_to_process):
-                    # 36. Insufficient Names Warning
                     st.warning(f"Warning: Only {len(names_list)} names provided for {len(files_to_process)} files. Some files will use default naming.")
 
-            # Process each file
             for i, file_item in enumerate(files_to_process):
-                # 37. Dynamic Progress Updates
                 progress = (i + 1) / len(files_to_process)
                 progress_bar.progress(progress)
                 status_text.text(f"Processing item {i + 1} of {len(files_to_process)}")
@@ -428,7 +462,7 @@ if st.button("Start Upload"):
                     results.append({"file": file_item, "success": False, "error": error_message})
                     continue
 
-            # 38. Display Results
+            # Display Results
             with results_container:
                 st.subheader("Upload Results")
 
@@ -447,7 +481,3 @@ if st.button("Start Upload"):
                     file_name="roblox_upload_results.csv",
                     mime="text/csv",
                 )
-
-# 41. App Note in Footer
-st.markdown("---")
-st.markdown("**Note:** This tool uses the Roblox API. Ensure compliance with Roblox's Terms of Service when uploading content.")
