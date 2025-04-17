@@ -145,7 +145,7 @@ def create_api_key(cookie: str) -> Union[str, None]:
         return None
 
 
-def upload_decal(api_key: str, image_bytes: bytes, name: str, description: str = "", image_type: str = "image/png") -> Dict:
+def upload_decal(api_key: str, image_bytes: bytes, name: str, description: str, user_id: str, image_type: str = "image/png") -> Dict:
     headers = {
         "x-api-key": api_key
     }
@@ -154,7 +154,12 @@ def upload_decal(api_key: str, image_bytes: bytes, name: str, description: str =
         'request': (None, json.dumps({
             "assetType": "Decal",
             "displayName": name,
-            "description": description
+            "description": description,
+            "creationContext": {
+                "creator": {
+                    "userId": user_id
+                }
+            }
         })),
         'fileContent': (f'{name}.png', image_bytes, image_type)  # or 'image/jpeg'
     }
@@ -182,6 +187,9 @@ def upload_decal(api_key: str, image_bytes: bytes, name: str, description: str =
 
 # 14. Main UI: Decal Upload Section
 st.header("Decal Upload")
+
+# Added userId input
+user_id = st.text_input("Enter User ID", value="", help="The user ID to associate with the uploaded decals.")
 
 # 15. Upload Method Selection
 upload_option = st.radio("Image Source", ["Upload Image Files", "Provide Image URLs"])
@@ -265,6 +273,9 @@ if st.button("Start Upload"):
     if not api_key:
         # 33. No API Key Error Message
         st.error("Please provide a valid API key first.")
+    elif not user_id:
+        # 33. No User ID Error Message
+        st.error("Please provide a User ID.")
     else:
         # 34. Initialize Progress Tracking
         progress_bar = st.progress(0)
@@ -318,7 +329,7 @@ if st.button("Start Upload"):
                         name = names_list[i] if i < len(names_list) else f"Decal {i + 1}"
 
                     # Call the updated upload_decal function
-                    result = upload_decal(api_key, image_bytes, name, description, image_type)
+                    result = upload_decal(api_key, image_bytes, name, description, user_id, image_type)
                     result["file"] = file_name
 
                     results.append(result)
