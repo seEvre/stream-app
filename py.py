@@ -9,6 +9,8 @@ import os
 from io import BytesIO
 from PIL import Image
 from typing import List, Dict, Union
+import hashlib  # Import hashlib
+import base64
 
 # Logging Configuration
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -21,62 +23,131 @@ CLEAN_WORDS = ["sky", "blue", "cloud", "star", "moon", "sun", "rainbow", "tree",
 ROBLOX_ASSETS_API = "https://apis.roblox.com/assets/v1/assets"
 ROBLOX_CLOUD_AUTH_API = "https://apis.roblox.com/cloud-authentication/v1/apiKey"
 
-# 1. Custom Theme
+# Function to encode image to base64
+def encode_image(image_bytes: bytes) -> str:
+    """Encodes image bytes to base64 string for HTML display."""
+    return base64.b64encode(image_bytes).decode('utf-8')
+
+# 1. Custom Theme (Improved)
 st.set_page_config(page_title="Roblox Decal Uploader", page_icon="🎮", layout="wide")
 
-# 2. Improved Styling with Markdown/CSS
+# 2. Enhanced Styling with Markdown/CSS (More Comprehensive)
 st.markdown("""
     <style>
-        .reportview-container { background: #f0f2f6; }
-        .css-12oz5g7 { padding: 1rem 1rem; }
-        .stButton>button { color: #4F8BF9; border-color: #4F8BF9; }
-        .stButton>button:hover { color: white; background-color : #4F8BF9; }
-        .stTextInput>label { color: #4F8BF9; }
-        .stTextArea>label { color: #4F8BF9; }
-        .stProgress>div>div { background-color: #4F8BF9 !important; }
-        .stSuccess { color: green; }
-        .stError { color: red; }
+        /* General */
+        body {
+            font-family: sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        /* Header */
+        .header {
+            background-color: #3498db;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        /* Sidebar */
+        .sidebar .stButton>button {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .sidebar .stRadio>label {
+            color: #3498db;
+        }
+        /* Button */
+        .stButton>button {
+            color: #fff;
+            background-color: #2ecc71;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .stButton>button:hover {
+            background-color: #27ae60;
+        }
+        /* Input */
+        .stTextInput>label, .stTextArea>label {
+            color: #3498db;
+        }
+        /* Progress Bar */
+        .stProgress>div>div {
+            background-color: #3498db !important;
+        }
+        /* Alert Messages */
+        .success-message {
+            color: green;
+            margin-top: 10px;
+        }
+        .error-message {
+            color: red;
+            margin-top: 10px;
+        }
+        .info-message {
+            color: #3498db;
+            margin-top: 10px;
+        }
+
+        /* Drag and Drop Area */
+        .drag-and-drop-area {
+            border: 2px dashed #3498db;
+            padding: 20px;
+            border-radius: 5px;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        /* Image Preview */
+        .image-preview {
+            max-width: 150px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
     </style>
 """, unsafe_allow_html=True)
 
-# 3. App Title with Emojis
-st.title("Roblox Decal Mass Uploader 🎮🖼️")
-st.markdown("Effortlessly upload multiple decals to Roblox using the Roblox API. Ensure compliance with Roblox's Terms of Service.")
+# 3. Header Redesign
+st.markdown('<div class="header"><h1>Roblox Decal Mass Uploader</h1><p>Effortlessly upload decals to Roblox.</p></div>', unsafe_allow_html=True)
 
-# 4. Enhanced Sidebar
+# 4. Enhanced Sidebar with Progressive Disclosure
 with st.sidebar:
     st.header("API & Authentication")
 
-    # 5. API Key Method Selection
     api_key_method = st.radio("API Key Source", ["Enter Existing Key", "Generate from Cookie"])
 
     api_key = None
 
     if api_key_method == "Enter Existing Key":
-        # 6. API Key Input Field
         api_key = st.text_input("Enter your Roblox API Key", type="password")
-        # 7. API Key Validation Check
         if api_key:
-            st.success("API Key entered successfully!")
+            st.markdown('<p class="success-message">API Key entered successfully!</p>', unsafe_allow_html=True)
     else:
-        # 8. Cookie Input Field with Security Note
         st.markdown("**Enter your .ROBLOSECURITY cookie (sensitive data)**")
         cookie = st.text_area("Cookie value will be hidden when typing", height=100)
-        # 9. API Key Generation Button
         if st.button("Generate API Key from Cookie"):
-            # 10. Animated Spinner While Generating API Key
             with st.spinner("Generating API Key..."):
                 api_key = create_api_key(cookie)
                 if api_key:
-                    # 11. Success Message with Expandable Code
-                    st.success("API Key generated successfully!")
-                    st.markdown("**Your API Key (click to reveal):**")
+                    st.markdown('<p class="success-message">API Key generated successfully!</p>', unsafe_allow_html=True)
                     expander = st.expander("Show API Key")
                     with expander:
                         st.code(api_key)
                 else:
-                    # 12. Error Message
-                    st.error("Failed to generate API Key. Check logs for details.")
+                    st.markdown('<p class="error-message">Failed to generate API Key. Check logs for details.</p>', unsafe_allow_html=True)
+
+    # Advanced Settings
+    with st.expander("Advanced Settings"):
+        st.markdown("## Rate Limiting")
+        rate_limit = st.slider("Requests per second", 1, 10, 5)
+        st.markdown("## Connection Pooling")
+        max_connections = st.slider("Max connections", 10, 100, 50)
+        st.markdown("## Caching")
+        cache_duration = st.slider("Cache duration (seconds)", 0, 60, 30)
 
 # 13. Improved Helper Functions
 def get_csrf_token(cookie: str) -> str:
@@ -197,6 +268,9 @@ upload_option = st.radio("Image Source", ["Upload Image Files", "Provide Image U
 # Add an image type selection
 image_type = st.selectbox("Image Type", ["image/png", "image/jpeg"])
 
+# 21. Drag and Drop Area
+st.markdown('<div class="drag-and-drop-area">Drag and drop your image files here</div>', unsafe_allow_html=True)
+
 if upload_option == "Upload Image Files":
     # 16. Multiple File Uploader
     uploaded_files = st.file_uploader("Upload image files", accept_multiple_files=True, type=["png", "jpg", "jpeg"])
@@ -209,8 +283,10 @@ if upload_option == "Upload Image Files":
         cols = st.columns(4)
         for i, file in enumerate(uploaded_files[:8]):  # Show first 8 images
             with cols[i % 4]:
-                img = Image.open(file)
-                st.image(img, caption=file.name, width=150)
+                # Display image with base64 encoding
+                image_bytes = file.getvalue()
+                image_data = encode_image(image_bytes)
+                st.markdown(f'<img src="data:image/png;base64,{image_data}" class="image-preview">', unsafe_allow_html=True)
 
         # 19. Info Message for More Files
         if len(uploaded_files) > 8:
@@ -237,7 +313,10 @@ else:
                 response.raise_for_status()
                 img = Image.open(BytesIO(response.content))
                 with cols[i % 4]:
-                    st.image(img, caption=f"URL {i + 1}", width=150)
+                    image_bytes = BytesIO()
+                    img.save(image_bytes, format="PNG")
+                    image_data = encode_image(image_bytes.getvalue())
+                    st.markdown(f'<img src="data:image/png;base64,{image_data}" class="image-preview">', unsafe_allow_html=True)
             except requests.exceptions.RequestException as e:
                 st.error(f"Could not preview URL {i + 1}: {e}")
 
