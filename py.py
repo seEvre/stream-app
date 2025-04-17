@@ -145,49 +145,28 @@ def create_api_key(cookie: str) -> Union[str, None]:
         return None
 
 
-def upload_decal(api_key: str, image_bytes: bytes, name: str, description: str = "") -> Dict:
-    create_headers = {
-        "x-api-key": api_key,
-        "Content-Type": "application/json"
+def upload_decal(api_key: str, image_bytes: bytes, name: str, description: str = "", image_type: str = "image/png") -> Dict:
+    headers = {
+        "x-api-key": api_key
     }
-    create_payload = {
-        "name": name,
-        "description": description,
-        "assetType": "Decal"  # Assuming this is the correct asset type for decals
+
+    files = {
+        'request': (None, json.dumps({
+            "assetType": "Decal",
+            "displayName": name,
+            "description": description
+        })),
+        'fileContent': (f'{name}.png', image_bytes, image_type)  # or 'image/jpeg'
     }
 
     try:
-        create_url = ROBLOX_ASSETS_API
-        create_response = requests.post(create_url, headers=create_headers, json=create_payload)
-        create_response.raise_for_status()
+        response = requests.post(ROBLOX_ASSETS_API, headers=headers, files=files)
+        response.raise_for_status()
 
-        create_data = create_response.json()
-        asset_id = create_data.get("assetId")
-        operation_id = create_data.get("operationId")
-
-        upload_url = f"{ROBLOX_ASSETS_API}/{asset_id}/contents"
-        upload_headers = {
-            "x-api-key": api_key,
-            "Content-Type": "application/octet-stream"
-        }
-
-        upload_response = requests.post(upload_url, headers=upload_headers, data=image_bytes)
-
-        upload_response.raise_for_status()  # Raise HTTPError for bad responses
-
-        status_url = f"https://apis.roblox.com/assets/v1/operations/{operation_id}"
-        status_response = requests.get(status_url, headers=create_headers)
-        status_response.raise_for_status()
-
-        return {
-            "success": True,
-            "asset_id": asset_id,
-            "operation_id": operation_id,
-            "status": status_response.json() if status_response.status_code == 200 else "Unknown"
-        }
+        return {"success": True, "response": response.json()}
 
     except requests.exceptions.RequestException as e:
-        error_message = f"Request failed: {e}"
+        error_message = f"Request failed: {e} - {response.text if 'response' in locals() else 'No response'}"
         logger.error(error_message)
         return {"success": False, "error": error_message}
 
@@ -201,12 +180,14 @@ def upload_decal(api_key: str, image_bytes: bytes, name: str, description: str =
         logger.exception(error_message)
         return {"success": False, "error": error_message}
 
-
 # 14. Main UI: Decal Upload Section
 st.header("Decal Upload")
 
 # 15. Upload Method Selection
 upload_option = st.radio("Image Source", ["Upload Image Files", "Provide Image URLs"])
+
+# Add an image type selection
+image_type = st.selectbox("Image Type", ["image/png", "image/jpeg"])
 
 if upload_option == "Upload Image Files":
     # 16. Multiple File Uploader
@@ -336,8 +317,10 @@ if st.button("Start Upload"):
                     else:  # Custom Names List
                         name = names_list[i] if i < len(names_list) else f"Decal {i + 1}"
 
-                    result = upload_decal(api_key, image_bytes, name, description)
+                    # Call the updated upload_decal function
+                    result = upload_decal(api_key, image_bytes, name, description, image_type)
                     result["file"] = file_name
+
                     results.append(result)
 
                     if add_delay and i < len(files_to_process) - 1:
