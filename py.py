@@ -130,35 +130,61 @@ def upload_decal(api_key, image_bytes, name, description=""):
 # Streamlit App
 st.set_page_config(page_title="Roblox Decal Uploader", page_icon="🎮", layout="wide")
 
-st.title("Roblox Decal Mass Uploader")
-st.markdown("Upload multiple decals to Roblox using the Roblox API")
+# Custom CSS for enhanced UI
+st.markdown("""
+    <style>
+        .reportview-container {
+            background: #f0f2f6;
+        }
+       .css-12oz5g7 {
+            padding: 1rem 1rem;
+        }
+        .stButton>button {
+            color: #4F8BF9;
+            border-color: #4F8BF9;
+        }
+        .stButton>button:hover {
+            color: white;
+            background-color : #4F8BF9;
+        }
+        .stTextInput>label {
+            color: #4F8BF9;
+        }
+        .stTextArea>label {
+            color: #4F8BF9;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
-# Sidebar for API key configuration
-st.sidebar.header("API Configuration")
-api_key_method = st.sidebar.radio("API Key Method", ["Enter API Key", "Generate from Cookie"])
+# Main Title
+st.title("Roblox Decal Mass Uploader 🎮")
+st.markdown("Upload multiple decals to Roblox using the Roblox API. Make sure you comply with Roblox's Terms of Service.")
 
-api_key = None
+# Sidebar for API Key configuration
+with st.sidebar:
+    st.header("API Configuration")
+    api_key_method = st.radio("API Key Method", ["Enter API Key", "Generate from Cookie"])
 
-if api_key_method == "Enter API Key":
-    api_key = st.sidebar.text_input("Enter your Roblox API Key")
-else:
-    # Use standard text_area without type parameter
-    st.sidebar.markdown("**Enter your .ROBLOSECURITY cookie (sensitive data)**")
-    cookie = st.sidebar.text_area("Cookie value will be hidden when typing", height=100)
-    if st.sidebar.button("Generate API Key"):
-        with st.sidebar.spinner("Generating API Key..."):
-            api_key = create_api_key(cookie)
-            if api_key:
-                st.sidebar.success("API Key generated successfully!")
-                # Display in a way that can be copied but not immediately visible
-                st.sidebar.markdown("**Your API Key (click to reveal):**")
-                expander = st.sidebar.expander("Show API Key")
-                with expander:
-                    st.code(api_key)
-            else:
-                st.sidebar.error("Failed to generate API Key. Check logs for details.")
+    api_key = None
 
-# Main upload section
+    if api_key_method == "Enter API Key":
+        api_key = st.text_input("Enter your Roblox API Key")
+    else:
+        st.markdown("**Enter your .ROBLOSECURITY cookie (sensitive data)**")
+        cookie = st.text_area("Cookie value will be hidden when typing", height=100)
+        if st.button("Generate API Key"):
+            with st.spinner("Generating API Key..."):
+                api_key = create_api_key(cookie)
+                if api_key:
+                    st.success("API Key generated successfully!")
+                    st.markdown("**Your API Key (click to reveal):**")
+                    expander = st.expander("Show API Key")
+                    with expander:
+                        st.code(api_key)
+                else:
+                    st.error("Failed to generate API Key. Check logs for details.")
+
+# Main section for decal upload
 st.header("Upload Decals")
 
 upload_option = st.radio("Upload Method", ["Upload Images", "Provide Image URLs"])
@@ -167,7 +193,7 @@ if upload_option == "Upload Images":
     uploaded_files = st.file_uploader("Upload image files", accept_multiple_files=True, type=["png", "jpg", "jpeg"])
     
     if uploaded_files:
-        st.write(f"Uploaded {len(uploaded_files)} images")
+        st.success(f"Uploaded {len(uploaded_files)} images")
         
         # Display a preview of the images in a grid
         cols = st.columns(4)
@@ -177,14 +203,14 @@ if upload_option == "Upload Images":
                 st.image(img, caption=file.name, width=150)
         
         if len(uploaded_files) > 8:
-            st.write(f"... and {len(uploaded_files) - 8} more")
+            st.info(f"... and {len(uploaded_files) - 8} more")
 else:
     image_urls = st.text_area("Enter image URLs (one per line)")
     preview_button = st.button("Preview URLs")
     
     if preview_button and image_urls:
         urls = [url.strip() for url in image_urls.split("\n") if url.strip()]
-        st.write(f"Found {len(urls)} URLs")
+        st.success(f"Found {len(urls)} URLs")
         
         # Preview first few images
         cols = st.columns(4)
@@ -201,7 +227,7 @@ else:
                 st.error(f"Could not preview URL {i+1}: {e}")
         
         if len(urls) > 8:
-            st.write(f"... and {len(urls) - 8} more")
+            st.info(f"... and {len(urls) - 8} more")
 
 # Additional upload options
 st.header("Upload Settings")
@@ -299,7 +325,7 @@ if st.button("Start Upload"):
                 
                 # Success/failure summary
                 success_count = sum(1 for r in results if r.get("success", False))
-                st.write(f"Uploaded {success_count} of {len(results)} items successfully.")
+                st.markdown(f"Uploaded **{success_count}** of **{len(results)}** items successfully.")
                 
                 # Detailed results as a dataframe
                 results_df = pd.DataFrame(results)
