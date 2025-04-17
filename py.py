@@ -335,9 +335,9 @@ def show_account_management_page():
     new_cookie = None
 
     if new_api_key_method == "Enter Existing Key":
-        new_api_key = st.text_input("Roblox API Key", type="password")
+        new_api_key = st.text_input("Roblox API Key", type="")
     else:
-        new_cookie = st.text_area(".ROBLOSECURITY Cookie", type="password")
+        new_cookie = st.text_area(".ROBLOSECURITY Cookie")
 
     if st.button("Add Account"):
         if new_account_name and (new_api_key or new_cookie):
@@ -394,7 +394,6 @@ def show_upload_settings_page():
     account = st.session_state.selected_account
     with st.container():
         st.markdown(f"Uploading with account: **{account['name']}**")
-        
         st.session_state.add_transparent_pixel = st.checkbox("Add Random Pixel", value=True, help="Adds a random pixel to prevent deletion of the decal")
         st.session_state.random_names = st.checkbox("Use Random Names", value=True, help="Creates random names for the assets")
         
@@ -640,3 +639,7 @@ with st.container():
             show_metadata_settings_page()
         elif st.session_state.page == 4:
             show_upload_page()
+
+        # App Note in Footer
+        st.markdown("---")
+        st.markdown("**Note:** This tool uses the Roblox API. Ensure compliance with Roblox's Terms of Service when uploading content.")
