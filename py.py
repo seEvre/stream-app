@@ -269,7 +269,7 @@ def upload_decal(api_key: str, image_bytes: bytes, name: str, description: str, 
         return {"success": False, "error": error_message}
 
     except Exception as e:
-        error_message = f"An unexpected error occurred: {e}"
+        error_message = f"Unexpected error occurred: {e}"
         logger.exception(error_message)
         return {"success": False, "error": error_message}
 
@@ -357,7 +357,8 @@ def show_upload_settings_page():
         upload_option = st.radio("Image Source", ["Upload Image Files", "Provide Image URLs"])
         st.session_state.image_type = st.selectbox("Image Type", ["image/png", "image/jpeg"])
 
-        st.markdown('<div class="drag-and-drop-area">Drag and drop your image files here</div>', unsafe_allow_html=True)
+        # Removed Custom Drag and Drop Message
+        # st.markdown('<div class="drag-and-drop-area">Drag and drop your image files here</div>', unsafe_allow_html=True)
 
         if upload_option == "Upload Image Files":
             st.session_state.uploaded_files = st.file_uploader("Upload image files", accept_multiple_files=True, type=["png", "jpg", "jpeg"])
