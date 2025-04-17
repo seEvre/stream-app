@@ -319,6 +319,10 @@ if 'results' not in st.session_state:
     st.session_state.results = []
 if 'num_api_keys' not in st.session_state:
      st.session_state.num_api_keys = 1 # Default to 1 API key
+if 'random_names' not in st.session_state:
+    st.session_state.random_names = True #Random Names!
+if 'add_transparent_pixel' not in st.session_state:
+    st.session_state.add_transparent_pixel = True
 
 # ---- Page Functions ----
 def show_account_management_page():
@@ -390,8 +394,9 @@ def show_upload_settings_page():
     account = st.session_state.selected_account
     with st.container():
         st.markdown(f"Uploading with account: **{account['name']}**")
-        random_names = st.checkbox("Use Random Names", value=True, help="Creates random names for the assets")
-        add_transparent_pixel = st.checkbox("Add Random Pixel", value=True, help="Adds a random pixel to prevent deletion of the decal")
+        
+        st.session_state.add_transparent_pixel = st.checkbox("Add Random Pixel", value=True, help="Adds a random pixel to prevent deletion of the decal")
+        st.session_state.random_names = st.checkbox("Use Random Names", value=True, help="Creates random names for the assets")
         
         upload_option = st.radio("Image Source", ["Upload Image Files", "Provide Image URLs"])
         st.session_state.image_type = st.selectbox("Image Type", ["image/png", "image/jpeg"])
@@ -463,14 +468,18 @@ def show_upload_page():
             st.error("Please provide a valid API key or cookie for the selected account.")
         else:
             api_keys = []
-            if account['cookie']:
+            
+            # Use the stored API keys if available.
+            if account.get('api_keys'):
+                api_keys = account['api_keys']
+
+            # Otherwise derive new keys
+            if len(api_keys) < st.session_state.num_api_keys and account['cookie']:
                 for number in range(st.session_state.num_api_keys):
                     # Attempt to generate API key from cookie, though it is better to move this to the account creation
                     api_key_to_use = create_api_key(account['cookie'])
                     if api_key_to_use:
                         api_keys.append(api_key_to_use)
-            elif account['api_key']:
-                api_keys.append(account['api_key'])
             
             progress_bar = st.progress(0)
             status_text = st.empty()
@@ -501,16 +510,15 @@ def show_upload_page():
                         if st.session_state.add_transparent_pixel:
                             image_bytes = add_random_transparent_pixel(image_bytes)
 
-                        if st.session_state.naming_option == "Use Filenames":
+                        if st.session_state.random_names:
+                            name = " ".join(random.choices(CLEAN_WORDS, k=3))
+                        elif st.session_state.naming_option == "Use Filenames":
                             name = os.path.splitext(file_name)[0]
                         elif st.session_state.naming_option == "Custom Naming Pattern":
                             name = st.session_state.name_pattern.replace("{index}", str(i + 1))
-                        elif st.session_state.random_names:
-                            name = " ".join(random.choices(CLEAN_WORDS, k=3))
                         else:  # Custom Names List
                             name = names_list[i] if i < len(names_list) else f"Decal {i + 1}"
 
-                        
                         api_key_to_use = api_keys[i % len(api_keys)]
                         user_id_to_use = account.get('user_id', "")  # Provide user_id if stored
 
@@ -565,7 +573,7 @@ def show_upload_page():
                         else:
                             return ''
 
-                    results_df['Asset Link'] = results_df['asset_id'].apply(make_clickable)
+                    results_df['Asset Link'] = results_df.get('asset_id','').apply(make_clickable)
                     st.write(results_df.to_html(escape=False, render_links=True), unsafe_allow_html=True)
 
                     # 40. CSV Download Button
@@ -632,5 +640,3 @@ with st.container():
             show_metadata_settings_page()
         elif st.session_state.page == 4:
             show_upload_page()
-
-
