@@ -394,11 +394,27 @@ def show_upload_settings_page():
     account = st.session_state.selected_account
     with st.container():
         st.markdown(f"Uploading with account: **{account['name']}**")
-        st.session_state.add_transparent_pixel = st.checkbox("Add Random Pixel", value=True, help="Adds a random pixel to prevent deletion of the decal")
-        st.session_state.random_names = st.checkbox("Use Random Names", value=True, help="Creates random names for the assets")
+
+        col1, col2 = st.columns(2)
         
-        upload_option = st.radio("Image Source", ["Upload Image Files", "Provide Image URLs"])
-        st.session_state.image_type = st.selectbox("Image Type", ["image/png", "image/jpeg"])
+        with col1:
+            upload_option = st.radio("Image Source", ["Upload Image Files", "Provide Image URLs"])
+            st.session_state.image_type = st.selectbox("Image Type", ["image/png", "image/jpeg"])
+
+        with col2:
+            st.session_state.add_transparent_pixel = st.checkbox("Add Random Pixel", value=True, help="Adds a random pixel to prevent deletion of the decal")
+            st.session_state.random_names = st.checkbox("Use Random Names", value=True, help="Creates random names for the assets")
+            st.session_state.naming_option = st.radio("Naming Method", ["Use Filenames", "Custom Naming Pattern", "Custom Names List"])
+
+            if st.session_state.naming_option == "Custom Naming Pattern":
+                st.session_state.name_pattern = st.text_input("Name Pattern (use {index} for numbering)", "My Decal {index}")
+            elif st.session_state.naming_option == "Custom Names List":
+                st.session_state.custom_names = st.text_area("Enter custom names (one per line)")
+    
+            st.session_state.description = st.text_area("Default Description (optional)")
+            st.session_state.add_delay = st.checkbox("Add delay between uploads", value=True)
+            if st.session_state.add_delay:
+                st.session_state.delay_seconds = st.slider("Delay in seconds", 1, 10, 3)
 
         if upload_option == "Upload Image Files":
             st.session_state.uploaded_files = st.file_uploader("Upload image files", accept_multiple_files=True, type=["png", "jpg", "jpeg"])
@@ -416,36 +432,6 @@ def show_upload_settings_page():
         else:
             st.session_state.uploaded_files = []
         
-        col1, col2, col3 = st.columns([1, 1, 1])
-        with col3:
-            next_page_button = st.button("Next: Metadata Settings")
-            if next_page_button:
-                st.session_state.page = 3
-
-def show_metadata_settings_page():
-    st.markdown('<div class="header"><h1>Metadata Settings</h1><p>Configure the metadata for your decals.</p></div>', unsafe_allow_html=True)
-
-    if not st.session_state.selected_account:
-        st.error("Please select an account first.")
-        st.session_state.page = 1
-        st.experimental_rerun()
-
-    with st.container():
-        col1, col2 = st.columns(2)
-        with col1:
-            st.session_state.naming_option = st.radio("Naming Method", ["Use Filenames", "Custom Naming Pattern", "Custom Names List"])
-
-            if st.session_state.naming_option == "Custom Naming Pattern":
-                st.session_state.name_pattern = st.text_input("Name Pattern (use {index} for numbering)", "My Decal {index}")
-            elif st.session_state.naming_option == "Custom Names List":
-                st.session_state.custom_names = st.text_area("Enter custom names (one per line)")
-
-        with col2:
-            st.session_state.description = st.text_area("Default Description (optional)")
-            st.session_state.add_delay = st.checkbox("Add delay between uploads", value=True)
-            if st.session_state.add_delay:
-                st.session_state.delay_seconds = st.slider("Delay in seconds", 1, 10, 3)
-
         col1, col2, col3 = st.columns([1, 1, 1])
         with col3:
             next_page_button = st.button("Next: Start Upload")
