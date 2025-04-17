@@ -645,5 +645,4 @@ with st.container():
             show_upload_page()
 
         # App Note in Footer
-        st.markdown("---")
-        st.markdown("**Note:** This tool uses the Roblox API. Ensure compliance with Roblox's Terms of Service when uploading content.")
+
