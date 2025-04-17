@@ -335,7 +335,7 @@ def show_account_management_page():
     new_cookie = None
 
     if new_api_key_method == "Enter Existing Key":
-        new_api_key = st.text_input("Roblox API Key", type="")
+        new_api_key = st.text_input("Roblox API Key")
     else:
         new_cookie = st.text_area(".ROBLOSECURITY Cookie")
 
@@ -401,11 +401,11 @@ def show_upload_settings_page():
             upload_option = st.radio("Image Source", ["Upload Image Files", "Provide Image URLs"])
             st.session_state.image_type = st.selectbox("Image Type", ["image/png", "image/jpeg"])
             st.session_state.add_transparent_pixel = st.checkbox("Add Random Pixel", value=True, help="Adds a random pixel to prevent deletion of the decal")
+            st.session_state.random_names = st.checkbox("Use Random Names", value=True, help="Creates random names for the assets")
 
         with col2:
-            st.session_state.random_names = st.checkbox("Use Random Names", value=True, help="Creates random names for the assets")
             st.session_state.naming_option = st.radio("Naming Method", ["Use Filenames", "Custom Naming Pattern", "Custom Names List"])
-    
+        
         if upload_option == "Upload Image Files":
             st.session_state.uploaded_files = st.file_uploader("Upload image files", accept_multiple_files=True, type=["png", "jpg", "jpeg"])
 
@@ -439,8 +439,6 @@ def show_metadata_settings_page():
     with st.container():
         col1, col2 = st.columns(2)
         with col1:
-            st.session_state.naming_option = st.radio("Naming Method", ["Use Filenames", "Custom Naming Pattern", "Custom Names List"])
-
             if st.session_state.naming_option == "Custom Naming Pattern":
                 st.session_state.name_pattern = st.text_input("Name Pattern (use {index} for numbering)", "My Decal {index}")
             elif st.session_state.naming_option == "Custom Names List":
