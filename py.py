@@ -38,6 +38,23 @@ st.markdown("""
             font-family: 'Arial', sans-serif;
             background-color: #f8f9fa;
             color: #343a40;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh; /* Ensure full viewport height */
+            margin: 0;
+            padding: 0;
+        }
+        /* Main container */
+        .main-container {
+            width: 80%;
+            max-width: 900px;
+            padding: 20px;
+            border-radius: 10px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
         }
         /* Header */
         .header {
@@ -56,22 +73,6 @@ st.markdown("""
             font-size: 1.1em;
             color: #d1ecf1;
         }
-        /* Sidebar */
-        /*.sidebar .stButton>button {
-            width: 100%;
-            margin-bottom: 15px;
-            background-color: #28a745;
-            border-color: #28a745;
-            color: white;
-            transition: background-color 0.3s;
-        }
-        .sidebar .stButton>button:hover {
-            background-color: #218838;
-        }
-        .sidebar .stRadio>label {
-            color: #007bff;
-            font-weight: bold;
-        }*/
         /* Input */
         .stTextInput>label, .stTextArea>label {
             color: #3498db;
@@ -197,7 +198,7 @@ def create_api_key(cookie: str) -> Union[str, None]:
 
     user_info = get_user_info(cookie)
     if user_info is None:
-        logger.error("Failed to get user info.")
+        logger.error(f"Error getting user info.")
         return None
     logger.info(f"User Info: {user_info}")
 
@@ -505,6 +506,9 @@ st.markdown("""
     .main {
         padding-left: 2rem !important;
         padding-right: 2rem !important;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -514,6 +518,12 @@ st.markdown("""
         /* General */
         .stRadio > label {
             font-size: large;
+        }
+        /* Centralize the page content */
+        body > div.reportview-container > div > div {
+            width: 80%;
+            max-width: 900px;
+            margin: 0 auto;
         }
     </style>
 """, unsafe_allow_html=True)
