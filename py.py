@@ -27,6 +27,23 @@ def encode_image(image_bytes: bytes) -> str:
     """Encodes image bytes to base64 string for HTML display."""
     return base64.b64encode(image_bytes).decode('utf-8')
 
+# Function to add a random transparent pixel
+def add_random_transparent_pixel(image_bytes: bytes) -> bytes:
+    """Adds a random transparent pixel to the image."""
+    try:
+        img = Image.open(BytesIO(image_bytes)).convert("RGBA")
+        pixels = img.load()
+        x = random.randint(0, img.size[0] - 1)
+        y = random.randint(0, img.size[1] - 1)
+        pixels[x, y] = (0, 0, 0, 0)  # Make pixel transparent
+        
+        new_image_bytes = BytesIO()
+        img.save(new_image_bytes, format="PNG")
+        return new_image_bytes.getvalue()
+    except Exception as e:
+        logger.error(f"Error adding transparent pixel: {e}")
+        return image_bytes  # Return original if fails
+
 # Custom Theme (Improved)
 st.set_page_config(page_title="Roblox Decal Uploader", page_icon="🎮", layout="wide")
 
@@ -257,7 +274,8 @@ def upload_decal(api_key: str, image_bytes: bytes, name: str, description: str, 
         response = requests.post(ROBLOX_ASSETS_API, headers=headers, files=files)
         response.raise_for_status()
 
-        return {"success": True, "response": response.json()}
+        asset_id = response.json().get('assetId')  # Get the asset ID from the response
+        return {"success": True, "asset_id": asset_id, "response": response.json()}  # Return the asset ID
 
     except requests.exceptions.RequestException as e:
         error_message = f"Request failed: {e} - {response.text if 'response' in locals() else 'No response'}"
@@ -277,10 +295,10 @@ def upload_decal(api_key: str, image_bytes: bytes, name: str, description: str, 
 # ---- Initialize Session State ----
 if 'page' not in st.session_state:
     st.session_state.page = 1
-if 'api_key' not in st.session_state:
-    st.session_state.api_key = None
-if 'user_id' not in st.session_state:
-    st.session_state.user_id = ""
+if 'accounts' not in st.session_state:
+    st.session_state.accounts = []
+if 'selected_account' not in st.session_state:
+    st.session_state.selected_account = None
 if 'uploaded_files' not in st.session_state:
     st.session_state.uploaded_files = []
 if 'image_type' not in st.session_state:
@@ -299,67 +317,84 @@ if 'delay_seconds' not in st.session_state:
     st.session_state.delay_seconds = 3
 if 'results' not in st.session_state:
     st.session_state.results = []
+if 'num_api_keys' not in st.session_state:
+     st.session_state.num_api_keys = 1 # Default to 1 API key
 
 # ---- Page Functions ----
-def show_api_authentication_page():
-    st.markdown('<div class="header"><h1>API Authentication</h1><p>Enter your API key or generate one using your Roblox cookie.</p></div>', unsafe_allow_html=True)
+def show_account_management_page():
+    st.markdown('<div class="header"><h1>Account Management</h1><p>Add and manage your Roblox accounts.</p></div>', unsafe_allow_html=True)
 
-    with st.container():
-        st.markdown("""
-        <style>
-        .stRadio>label {
-            color: #007bff;
-            font-weight: bold;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-        api_key_method = st.radio("API Key Source", ["Enter Existing Key", "Generate from Cookie"])
-        
-        if api_key_method == "Enter Existing Key":
-            st.session_state.api_key = st.text_input("Enter your Roblox API Key", type="password")
-            if st.session_state.api_key:
-                st.markdown('<p class="success-message">API Key entered successfully!</p>', unsafe_allow_html=True)
+    new_account_name = st.text_input("Account Name")
+    new_api_key_method = st.radio("API Key Source", ["Enter Existing Key", "Generate from Cookie"], horizontal=True)
+
+    new_api_key = None
+    new_cookie = None
+
+    if new_api_key_method == "Enter Existing Key":
+        new_api_key = st.text_input("Roblox API Key", type="password")
+    else:
+        new_cookie = st.text_area(".ROBLOSECURITY Cookie", type="password")
+
+    if st.button("Add Account"):
+        if new_account_name and (new_api_key or new_cookie):
+            account = {"name": new_account_name, "api_key": new_api_key, "cookie": new_cookie, 'api_keys': []}
+            st.session_state.accounts.append(account)
+            st.success(f"Account '{new_account_name}' added successfully!")
         else:
-            st.markdown("**Enter your .ROBLOSECURITY cookie (sensitive data)**")
-            cookie = st.text_area("Cookie value will be hidden when typing", height=100)
-            if st.button("Generate API Key from Cookie"):
-                with st.spinner("Generating API Key..."):
-                    st.session_state.api_key = create_api_key(cookie)
-                    if st.session_state.api_key:
-                        st.markdown('<p class="success-message">API Key generated successfully!</p>', unsafe_allow_html=True)
-                        expander = st.expander("Show API Key")
-                        with expander:
-                            st.code(st.session_state.api_key)
-                    else:
-                        st.markdown('<p class="error-message">Failed to generate API Key. Check logs for details.</p>', unsafe_allow_html=True)
+            st.error("Please provide both an account name and either an API key or a cookie.")
+    
+    st.subheader("Account API Key Settings")
+    
+    num_api_keys = st.number_input("Number of API Keys", min_value=1, max_value=5, value=st.session_state.num_api_keys, step=1, help="The amount of keys created for an account. Do not overload.")
+    st.session_state.num_api_keys = num_api_keys
 
-        col1, col2, col3 = st.columns([1, 1, 1])
-        with col3:
-            if st.session_state.api_key:
-                next_page_button = st.button("Next: Upload Settings")
-                if next_page_button:
-                    st.session_state.page = 2
+    st.subheader("Existing Accounts")
+    if st.session_state.accounts:
+        for i, account in enumerate(st.session_state.accounts):
+            with st.container():
+                col1, col2, col3 = st.columns([3, 1, 1])
+                with col1:
+                    st.markdown(f"**{account['name']}**")
+                    # Display API key or Cookie status, not the value
+                    st.write(f"API Key: {'Present' if account['api_key'] else 'Not Set'}")
+                    st.write(f"Cookie: {'Present' if account['cookie'] else 'Not Set'}")
+                with col2:
+                    select_account_button = st.button(f"Select Account", key=f"select_account_{i}")
+                    if select_account_button:
+                        st.session_state.selected_account = account
+                        st.success(f"Account '{account['name']}' selected!")
+                with col3:
+                    delete_account_button = st.button(f"Delete Account", key=f"delete_account_{i}")
+                    if delete_account_button:
+                        del st.session_state.accounts[i]
+                        st.warning(f"Account '{account['name']}' deleted.")
+                        break  # Prevent index out of bounds error after deletion
+    else:
+        st.info("No accounts added yet.")
+
+    next_page_button = st.button("Next: Upload Settings")
+    if next_page_button and st.session_state.accounts:
+        st.session_state.page = 2
+    elif not st.session_state.accounts:
+        st.warning("Please add at least one account before proceeding.")
 
 def show_upload_settings_page():
     st.markdown('<div class="header"><h1>Upload Settings</h1><p>Configure how your decals will be uploaded.</p></div>', unsafe_allow_html=True)
 
+    # Ensure an account is selected
+    if not st.session_state.selected_account:
+        st.error("Please select an account first.")
+        st.session_state.page = 1  # Go back to account management
+        st.experimental_rerun()  # Rerun the script to reflect the change
+
+    account = st.session_state.selected_account
     with st.container():
-        st.session_state.user_id = st.text_input("Enter User ID", value=st.session_state.user_id, help="The user ID to associate with the uploaded decals.")
-        
-        st.markdown("""
-        <style>
-        .stRadio>label {
-            color: #007bff;
-            font-weight: bold;
-        }
-        </style>
-        """, unsafe_allow_html=True)
+        st.markdown(f"Uploading with account: **{account['name']}**")
+        random_names = st.checkbox("Use Random Names", value=True, help="Creates random names for the assets")
+        add_transparent_pixel = st.checkbox("Add Random Pixel", value=True, help="Adds a random pixel to prevent deletion of the decal")
         
         upload_option = st.radio("Image Source", ["Upload Image Files", "Provide Image URLs"])
         st.session_state.image_type = st.selectbox("Image Type", ["image/png", "image/jpeg"])
-
-        # Removed Custom Drag and Drop Message
-        # st.markdown('<div class="drag-and-drop-area">Drag and drop your image files here</div>', unsafe_allow_html=True)
 
         if upload_option == "Upload Image Files":
             st.session_state.uploaded_files = st.file_uploader("Upload image files", accept_multiple_files=True, type=["png", "jpg", "jpeg"])
@@ -386,18 +421,14 @@ def show_upload_settings_page():
 def show_metadata_settings_page():
     st.markdown('<div class="header"><h1>Metadata Settings</h1><p>Configure the metadata for your decals.</p></div>', unsafe_allow_html=True)
 
+    if not st.session_state.selected_account:
+        st.error("Please select an account first.")
+        st.session_state.page = 1
+        st.experimental_rerun()
+
     with st.container():
         col1, col2 = st.columns(2)
         with col1:
-            st.markdown("""
-            <style>
-            .stRadio>label {
-                color: #007bff;
-                font-weight: bold;
-            }
-            </style>
-            """, unsafe_allow_html=True)
-            
             st.session_state.naming_option = st.radio("Naming Method", ["Use Filenames", "Custom Naming Pattern", "Custom Names List"])
 
             if st.session_state.naming_option == "Custom Naming Pattern":
@@ -420,12 +451,27 @@ def show_metadata_settings_page():
 def show_upload_page():
     st.markdown('<div class="header"><h1>Start Upload</h1><p>Start the decal upload process.</p></div>', unsafe_allow_html=True)
 
+    if not st.session_state.selected_account:
+        st.error("Please select an account first.")
+        st.session_state.page = 1
+        st.experimental_rerun()
+
+    account = st.session_state.selected_account
+    st.markdown(f"Number of API Keys:{st.session_state.num_api_keys}")
     if st.button("Start Upload"):
-        if not st.session_state.api_key:
-            st.error("Please provide a valid API key first.")
-        elif not st.session_state.user_id:
-            st.error("Please provide a User ID.")
+        if not account['api_key'] and not account['cookie']:
+            st.error("Please provide a valid API key or cookie for the selected account.")
         else:
+            api_keys = []
+            if account['cookie']:
+                for number in range(st.session_state.num_api_keys):
+                    # Attempt to generate API key from cookie, though it is better to move this to the account creation
+                    api_key_to_use = create_api_key(account['cookie'])
+                    if api_key_to_use:
+                        api_keys.append(api_key_to_use)
+            elif account['api_key']:
+                api_keys.append(account['api_key'])
+            
             progress_bar = st.progress(0)
             status_text = st.empty()
             results_container = st.container()
@@ -452,17 +498,35 @@ def show_upload_page():
                         file_name = file_item.name
                         image_bytes = file_item.getvalue()
 
+                        if st.session_state.add_transparent_pixel:
+                            image_bytes = add_random_transparent_pixel(image_bytes)
+
                         if st.session_state.naming_option == "Use Filenames":
                             name = os.path.splitext(file_name)[0]
                         elif st.session_state.naming_option == "Custom Naming Pattern":
                             name = st.session_state.name_pattern.replace("{index}", str(i + 1))
+                        elif st.session_state.random_names:
+                            name = " ".join(random.choices(CLEAN_WORDS, k=3))
                         else:  # Custom Names List
                             name = names_list[i] if i < len(names_list) else f"Decal {i + 1}"
 
-                        # Call the updated upload_decal function
-                        result = upload_decal(st.session_state.api_key, image_bytes, name, st.session_state.description, st.session_state.user_id, st.session_state.image_type)
-                        result["file"] = file_name
+                        
+                        api_key_to_use = api_keys[i % len(api_keys)]
+                        user_id_to_use = account.get('user_id', "")  # Provide user_id if stored
 
+                        # Attempt to derive User ID if one does not exist
+                        if not user_id_to_use and account['cookie']:
+                            user_information = get_user_info(account['cookie'])
+                            # Attempt to derive user id with get user information
+                            if user_information is not None:
+                                user_id_to_use = user_information['id']
+                            else:
+                                # If the cookie for some reason doesnt work skip the item
+                                raise ValueError("Cookie Invalid")
+
+                        # Call the updated upload_decal function
+                        result = upload_decal(api_key_to_use, image_bytes, name, st.session_state.description, user_id_to_use, st.session_state.image_type)
+                        result["file"] = file_name
                         st.session_state.results.append(result)
 
                         if st.session_state.add_delay and i < len(files_to_process) - 1:
@@ -473,32 +537,45 @@ def show_upload_page():
                         logger.error(error_message)
                         st.session_state.results.append({"file": file_item, "success": False, "error": error_message})
                         continue
-
+                    except ValueError as e:
+                        error_message = f"Error processing {file_item}: {e}"
+                        logger.error(error_message)
+                        st.session_state.results.append({"file": file_item, "success": False, "error": error_message})
+                        continue
                     except Exception as e:
                         error_message = f"Unexpected error processing {file_item}: {e}"
                         logger.error(error_message)
                         st.session_state.results.append({"file": file_item, "success": False, "error": error_message})
                         continue
 
-            # Display Results
-            with results_container:
-                st.subheader("Upload Results")
+                # Display Results
+                with results_container:
+                    st.subheader("Upload Results")
 
-                success_count = sum(1 for r in st.session_state.results if r.get("success", False))
-                st.markdown(f"Uploaded **{success_count}** of **{len(st.session_state.results)}** items successfully.")
+                    success_count = sum(1 for r in st.session_state.results if r.get("success", False))
+                    st.markdown(f"Uploaded **{success_count}** of **{len(st.session_state.results)}** items successfully.")
 
-                # 39. Results as Dataframe
-                results_df = pd.DataFrame(st.session_state.results)
-                st.dataframe(results_df)
+                    # 39. Results as Dataframe
+                    results_df = pd.DataFrame(st.session_state.results)
 
-                # 40. CSV Download Button
-                csv = results_df.to_csv(index=False)
-                st.download_button(
-                    label="Download Results as CSV",
-                    data=csv,
-                    file_name="roblox_upload_results.csv",
-                    mime="text/csv",
-                )
+                    # Add a direct link to the asset on Roblox
+                    def make_clickable(asset_id):
+                        if asset_id:
+                            return f'<a target="_blank" href="https://www.roblox.com/library/{asset_id}">View on Roblox</a>'
+                        else:
+                            return ''
+
+                    results_df['Asset Link'] = results_df['asset_id'].apply(make_clickable)
+                    st.write(results_df.to_html(escape=False, render_links=True), unsafe_allow_html=True)
+
+                    # 40. CSV Download Button
+                    csv = results_df.to_csv(index=False)
+                    st.download_button(
+                        label="Download Results as CSV",
+                        data=csv,
+                        file_name="roblox_upload_results.csv",
+                        mime="text/csv",
+                    )
 
 # ---- Main App Flow ----
 st.markdown("""
@@ -548,7 +625,7 @@ st.markdown("""
 with st.container():
     with st.container():
         if st.session_state.page == 1:
-            show_api_authentication_page()
+            show_account_management_page()
         elif st.session_state.page == 2:
             show_upload_settings_page()
         elif st.session_state.page == 3:
@@ -556,6 +633,4 @@ with st.container():
         elif st.session_state.page == 4:
             show_upload_page()
 
-        # App Note in Footer
-        st.markdown("---")
-        st.markdown("**Note:** This tool uses the Roblox API. Ensure compliance with Roblox's Terms of Service when uploading content.")
+
