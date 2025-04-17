@@ -6,7 +6,6 @@ import logging
 import pandas as pd
 import time
 import os
-import hashlib
 from io import BytesIO
 from PIL import Image
 from typing import List, Dict, Union
@@ -202,15 +201,6 @@ def upload_decal(api_key: str, image_bytes: bytes, name: str, description: str =
         logger.exception(error_message)
         return {"success": False, "error": error_message}
 
-# Add hashing function
-def hash_image(image_bytes: bytes, algorithm: str = 'sha256') -> str:
-    """Hashes image bytes using the specified algorithm (default: SHA256)."""
-    if algorithm not in hashlib.algorithms_available:
-        raise ValueError(f"Algorithm {algorithm} not available. Choose from: {hashlib.algorithms_available}")
-
-    hasher = hashlib.new(algorithm)
-    hasher.update(image_bytes)
-    return hasher.hexdigest()
 
 # 14. Main UI: Decal Upload Section
 st.header("Decal Upload")
@@ -236,25 +226,6 @@ if upload_option == "Upload Image Files":
         # 19. Info Message for More Files
         if len(uploaded_files) > 8:
             st.info(f"... and {len(uploaded_files) - 8} more")
-
-        # Image Hashing Option
-        if st.checkbox("Calculate Image Hashes?"):
-            hash_algorithm = st.selectbox("Hashing Algorithm", options=hashlib.algorithms_available)
-
-            hash_results = {}
-            for file in uploaded_files:
-                try:
-                    image_bytes = file.getvalue()
-                    file_hash = hash_image(image_bytes, hash_algorithm)
-                    hash_results[file.name] = file_hash
-                except Exception as e:
-                    st.error(f"Error hashing {file.name}: {e}")
-
-            if hash_results:
-                st.subheader("Image Hashes")
-                for filename, file_hash in hash_results.items():
-                    st.write(f"**{filename}:**")
-                    st.code(file_hash)
 
 
 else:
