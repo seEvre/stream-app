@@ -147,11 +147,10 @@ def create_api_key(cookie: str) -> Union[str, None]:
 
 
 def upload_decal(api_key: str, image_bytes: bytes, name: str, description: str = "") -> Dict:
-    headers = {
+    create_headers = {
         "x-api-key": api_key,
         "Content-Type": "application/json"
     }
-
     create_payload = {
         "name": name,
         "description": description,
@@ -160,7 +159,7 @@ def upload_decal(api_key: str, image_bytes: bytes, name: str, description: str =
 
     try:
         create_url = ROBLOX_ASSETS_API
-        create_response = requests.post(create_url, headers=headers, json=create_payload)
+        create_response = requests.post(create_url, headers=create_headers, json=create_payload)
         create_response.raise_for_status()
 
         create_data = create_response.json()
@@ -172,11 +171,13 @@ def upload_decal(api_key: str, image_bytes: bytes, name: str, description: str =
             "x-api-key": api_key,
             "Content-Type": "application/octet-stream"
         }
+
         upload_response = requests.post(upload_url, headers=upload_headers, data=image_bytes)
-        upload_response.raise_for_status()
+
+        upload_response.raise_for_status()  # Raise HTTPError for bad responses
 
         status_url = f"https://apis.roblox.com/assets/v1/operations/{operation_id}"
-        status_response = requests.get(status_url, headers=headers)
+        status_response = requests.get(status_url, headers=create_headers)
         status_response.raise_for_status()
 
         return {
@@ -201,7 +202,6 @@ def upload_decal(api_key: str, image_bytes: bytes, name: str, description: str =
         logger.exception(error_message)
         return {"success": False, "error": error_message}
 
-
 # Add hashing function
 def hash_image(image_bytes: bytes, algorithm: str = 'sha256') -> str:
     """Hashes image bytes using the specified algorithm (default: SHA256)."""
@@ -211,7 +211,6 @@ def hash_image(image_bytes: bytes, algorithm: str = 'sha256') -> str:
     hasher = hashlib.new(algorithm)
     hasher.update(image_bytes)
     return hasher.hexdigest()
-
 
 # 14. Main UI: Decal Upload Section
 st.header("Decal Upload")
@@ -337,9 +336,10 @@ if st.button("Start Upload"):
         else:
             names_list = []
             if naming_option == "Custom Names List" and custom_names:
-                names_list = [name.strip() for name in custom_names.split("\n") if len(names_list) < len(files_to_process)]
-                # 36. Insufficient Names Warning
-                st.warning(f"Warning: Only {len(names_list)} names provided for {len(files_to_process)} files. Some files will use default naming.")
+                names_list = [name.strip() for name in custom_names.split("\n")]
+                if len(names_list) < len(files_to_process):
+                    # 36. Insufficient Names Warning
+                    st.warning(f"Warning: Only {len(names_list)} names provided for {len(files_to_process)} files. Some files will use default naming.")
 
             # Process each file
             for i, file_item in enumerate(files_to_process):
