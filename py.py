@@ -41,7 +41,7 @@ st.markdown("""
         }
         /* Header */
         .header {
-            background-color: #007bff;
+            background-color: #3498db;
             color: white;
             padding: 20px;
             border-radius: 10px;
@@ -74,12 +74,12 @@ st.markdown("""
         }*/
         /* Input */
         .stTextInput>label, .stTextArea>label {
-            color: #007bff;
+            color: #3498db;
             font-weight: bold;
         }
         /* Progress Bar */
         .stProgress>div>div {
-            background-color: #007bff !important;
+            background-color: #3498db !important;
         }
         /* Alert Messages */
         .success-message {
@@ -99,7 +99,7 @@ st.markdown("""
             margin-top: 10px;
         }
         .info-message {
-            color: #007bff;
+            color: #3498db;
             background-color: #cce5ff;
             border: 1px solid #b8daff;
             padding: 10px;
@@ -108,7 +108,7 @@ st.markdown("""
         }
         /* Drag and Drop Area */
         .drag-and-drop-area {
-            border: 2px dashed #007bff;
+            border: 2px dashed #3498db;
             padding: 20px;
             border-radius: 5px;
             text-align: center;
@@ -133,7 +133,7 @@ st.markdown("""
         }
         /* Custom Button */
         .custom-button {
-            background-color: #007bff;
+            background-color: #3498db;
             color: white;
             padding: 10px 20px;
             border: none;
@@ -158,6 +158,13 @@ st.markdown("""
         }
         .next-button:hover {
             background-color: #218838;
+        }
+        /* Container Styling */
+        .page-container {
+            padding: 20px;
+            border-radius: 10px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
     </style>
 """, unsafe_allow_html=True)
@@ -262,7 +269,7 @@ def upload_decal(api_key: str, image_bytes: bytes, name: str, description: str, 
         return {"success": False, "error": error_message}
 
     except Exception as e:
-        error_message = f"Unexpected error occurred: {e}"
+        error_message = f"An unexpected error occurred: {e}"
         logger.exception(error_message)
         return {"success": False, "error": error_message}
 
@@ -296,87 +303,122 @@ if 'results' not in st.session_state:
 def show_api_authentication_page():
     st.markdown('<div class="header"><h1>API Authentication</h1><p>Enter your API key or generate one using your Roblox cookie.</p></div>', unsafe_allow_html=True)
 
-    api_key_method = st.radio("API Key Source", ["Enter Existing Key", "Generate from Cookie"])
+    with st.container():
+        st.markdown("""
+        <style>
+        .stRadio>label {
+            color: #007bff;
+            font-weight: bold;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        api_key_method = st.radio("API Key Source", ["Enter Existing Key", "Generate from Cookie"])
+        
+        if api_key_method == "Enter Existing Key":
+            st.session_state.api_key = st.text_input("Enter your Roblox API Key", type="password")
+            if st.session_state.api_key:
+                st.markdown('<p class="success-message">API Key entered successfully!</p>', unsafe_allow_html=True)
+        else:
+            st.markdown("**Enter your .ROBLOSECURITY cookie (sensitive data)**")
+            cookie = st.text_area("Cookie value will be hidden when typing", height=100)
+            if st.button("Generate API Key from Cookie"):
+                with st.spinner("Generating API Key..."):
+                    st.session_state.api_key = create_api_key(cookie)
+                    if st.session_state.api_key:
+                        st.markdown('<p class="success-message">API Key generated successfully!</p>', unsafe_allow_html=True)
+                        expander = st.expander("Show API Key")
+                        with expander:
+                            st.code(st.session_state.api_key)
+                    else:
+                        st.markdown('<p class="error-message">Failed to generate API Key. Check logs for details.</p>', unsafe_allow_html=True)
 
-    if api_key_method == "Enter Existing Key":
-        st.session_state.api_key = st.text_input("Enter your Roblox API Key", type="password")
-        if st.session_state.api_key:
-            st.markdown('<p class="success-message">API Key entered successfully!</p>', unsafe_allow_html=True)
-    else:
-        st.markdown("**Enter your .ROBLOSECURITY cookie (sensitive data)**")
-        cookie = st.text_area("Cookie value will be hidden when typing", height=100)
-        if st.button("Generate API Key from Cookie"):
-            with st.spinner("Generating API Key..."):
-                st.session_state.api_key = create_api_key(cookie)
-                if st.session_state.api_key:
-                    st.markdown('<p class="success-message">API Key generated successfully!</p>', unsafe_allow_html=True)
-                    expander = st.expander("Show API Key")
-                    with expander:
-                        st.code(st.session_state.api_key)
-                else:
-                    st.markdown('<p class="error-message">Failed to generate API Key. Check logs for details.</p>', unsafe_allow_html=True)
-
-    if st.session_state.api_key:
-        next_page_button = st.markdown('<button class="next-button">Next: Upload Settings</button>', unsafe_allow_html=True)
-        if next_page_button:
-            st.session_state.page = 2
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col3:
+            if st.session_state.api_key:
+                next_page_button = st.button("Next: Upload Settings")
+                if next_page_button:
+                    st.session_state.page = 2
 
 def show_upload_settings_page():
     st.markdown('<div class="header"><h1>Upload Settings</h1><p>Configure how your decals will be uploaded.</p></div>', unsafe_allow_html=True)
 
-    st.session_state.user_id = st.text_input("Enter User ID", value=st.session_state.user_id, help="The user ID to associate with the uploaded decals.")
-    upload_option = st.radio("Image Source", ["Upload Image Files", "Provide Image URLs"])
-    st.session_state.image_type = st.selectbox("Image Type", ["image/png", "image/jpeg"])
+    with st.container():
+        st.session_state.user_id = st.text_input("Enter User ID", value=st.session_state.user_id, help="The user ID to associate with the uploaded decals.")
+        
+        st.markdown("""
+        <style>
+        .stRadio>label {
+            color: #007bff;
+            font-weight: bold;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        upload_option = st.radio("Image Source", ["Upload Image Files", "Provide Image URLs"])
+        st.session_state.image_type = st.selectbox("Image Type", ["image/png", "image/jpeg"])
 
-    st.markdown('<div class="drag-and-drop-area">Drag and drop your image files here</div>', unsafe_allow_html=True)
+        st.markdown('<div class="drag-and-drop-area">Drag and drop your image files here</div>', unsafe_allow_html=True)
 
-    if upload_option == "Upload Image Files":
-        st.session_state.uploaded_files = st.file_uploader("Upload image files", accept_multiple_files=True, type=["png", "jpg", "jpeg"])
+        if upload_option == "Upload Image Files":
+            st.session_state.uploaded_files = st.file_uploader("Upload image files", accept_multiple_files=True, type=["png", "jpg", "jpeg"])
 
-        if st.session_state.uploaded_files:
-            st.success(f"Uploaded {len(st.session_state.uploaded_files)} images")
-            cols = st.columns(4)
-            for i, file in enumerate(st.session_state.uploaded_files[:8]):
-                with cols[i % 4]:
-                    image_bytes = file.getvalue()
-                    image_data = encode_image(image_bytes)
-                    st.markdown(f'<img src="data:image/png;base64,{image_data}" class="image-preview">', unsafe_allow_html=True)
-            if len(st.session_state.uploaded_files) > 8:
-                st.info(f"... and {len(st.session_state.uploaded_files) - 8} more")
-    else:
-        st.session_state.uploaded_files = []
-
-    next_page_button = st.markdown('<button class="next-button">Next: Metadata Settings</button>', unsafe_allow_html=True)
-    if next_page_button:
-        st.session_state.page = 3
+            if st.session_state.uploaded_files:
+                st.success(f"Uploaded {len(st.session_state.uploaded_files)} images")
+                cols = st.columns(4)
+                for i, file in enumerate(st.session_state.uploaded_files[:8]):
+                    with cols[i % 4]:
+                        image_bytes = file.getvalue()
+                        image_data = encode_image(image_bytes)
+                        st.markdown(f'<img src="data:image/png;base64,{image_data}" class="image-preview">', unsafe_allow_html=True)
+                if len(st.session_state.uploaded_files) > 8:
+                    st.info(f"... and {len(st.session_state.uploaded_files) - 8} more")
+        else:
+            st.session_state.uploaded_files = []
+        
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col3:
+            next_page_button = st.button("Next: Metadata Settings")
+            if next_page_button:
+                st.session_state.page = 3
 
 def show_metadata_settings_page():
     st.markdown('<div class="header"><h1>Metadata Settings</h1><p>Configure the metadata for your decals.</p></div>', unsafe_allow_html=True)
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.session_state.naming_option = st.radio("Naming Method", ["Use Filenames", "Custom Naming Pattern", "Custom Names List"])
+    with st.container():
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("""
+            <style>
+            .stRadio>label {
+                color: #007bff;
+                font-weight: bold;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+            
+            st.session_state.naming_option = st.radio("Naming Method", ["Use Filenames", "Custom Naming Pattern", "Custom Names List"])
 
-        if st.session_state.naming_option == "Custom Naming Pattern":
-            st.session_state.name_pattern = st.text_input("Name Pattern (use {index} for numbering)", "My Decal {index}")
-        elif st.session_state.naming_option == "Custom Names List":
-            st.session_state.custom_names = st.text_area("Enter custom names (one per line)")
+            if st.session_state.naming_option == "Custom Naming Pattern":
+                st.session_state.name_pattern = st.text_input("Name Pattern (use {index} for numbering)", "My Decal {index}")
+            elif st.session_state.naming_option == "Custom Names List":
+                st.session_state.custom_names = st.text_area("Enter custom names (one per line)")
 
-    with col2:
-        st.session_state.description = st.text_area("Default Description (optional)")
-        st.session_state.add_delay = st.checkbox("Add delay between uploads", value=True)
-        if st.session_state.add_delay:
-            st.session_state.delay_seconds = st.slider("Delay in seconds", 1, 10, 3)
+        with col2:
+            st.session_state.description = st.text_area("Default Description (optional)")
+            st.session_state.add_delay = st.checkbox("Add delay between uploads", value=True)
+            if st.session_state.add_delay:
+                st.session_state.delay_seconds = st.slider("Delay in seconds", 1, 10, 3)
 
-    next_page_button = st.markdown('<button class="next-button">Next: Start Upload</button>', unsafe_allow_html=True)
-    if next_page_button:
-        st.session_state.page = 4
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col3:
+            next_page_button = st.button("Next: Start Upload")
+            if next_page_button:
+                st.session_state.page = 4
 
 def show_upload_page():
     st.markdown('<div class="header"><h1>Start Upload</h1><p>Start the decal upload process.</p></div>', unsafe_allow_html=True)
 
-    start_upload = st.markdown('<button class="custom-button">Start Upload</button>', unsafe_allow_html=True)
-    if start_upload and st.button("Start Upload (Hidden)"):  # Keep the hidden button for logic
+    if st.button("Start Upload"):
         if not st.session_state.api_key:
             st.error("Please provide a valid API key first.")
         elif not st.session_state.user_id:
@@ -436,36 +478,73 @@ def show_upload_page():
                         st.session_state.results.append({"file": file_item, "success": False, "error": error_message})
                         continue
 
-                # Display Results
-                with results_container:
-                    st.subheader("Upload Results")
+            # Display Results
+            with results_container:
+                st.subheader("Upload Results")
 
-                    success_count = sum(1 for r in st.session_state.results if r.get("success", False))
-                    st.markdown(f"Uploaded **{success_count}** of **{len(st.session_state.results)}** items successfully.")
+                success_count = sum(1 for r in st.session_state.results if r.get("success", False))
+                st.markdown(f"Uploaded **{success_count}** of **{len(st.session_state.results)}** items successfully.")
 
-                    # 39. Results as Dataframe
-                    results_df = pd.DataFrame(st.session_state.results)
-                    st.dataframe(results_df)
+                # 39. Results as Dataframe
+                results_df = pd.DataFrame(st.session_state.results)
+                st.dataframe(results_df)
 
-                    # 40. CSV Download Button
-                    csv = results_df.to_csv(index=False)
-                    st.download_button(
-                        label="Download Results as CSV",
-                        data=csv,
-                        file_name="roblox_upload_results.csv",
-                        mime="text/csv",
-                    )
+                # 40. CSV Download Button
+                csv = results_df.to_csv(index=False)
+                st.download_button(
+                    label="Download Results as CSV",
+                    data=csv,
+                    file_name="roblox_upload_results.csv",
+                    mime="text/csv",
+                )
 
 # ---- Main App Flow ----
-if st.session_state.page == 1:
-    show_api_authentication_page()
-elif st.session_state.page == 2:
-    show_upload_settings_page()
-elif st.session_state.page == 3:
-    show_metadata_settings_page()
-elif st.session_state.page == 4:
-    show_upload_page()
+st.markdown("""
+    <style>
+    .main {
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-# App Note in Footer
-st.markdown("---")
-st.markdown("**Note:** This tool uses the Roblox API. Ensure compliance with Roblox's Terms of Service when uploading content.")
+st.markdown("""
+    <style>
+        /* General */
+        .stRadio > label {
+            font-size: large;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+    <style>
+    label {
+        font-size: large;
+    }
+    h1 {
+        font-size: 2.5rem;
+    }
+    h2 {
+        font-size: 2rem;
+    }
+    [data-testid="stForm"] {
+        border: 0px
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+with st.container():
+    with st.container():
+        if st.session_state.page == 1:
+            show_api_authentication_page()
+        elif st.session_state.page == 2:
+            show_upload_settings_page()
+        elif st.session_state.page == 3:
+            show_metadata_settings_page()
+        elif st.session_state.page == 4:
+            show_upload_page()
+
+        # App Note in Footer
+        st.markdown("---")
+        st.markdown("**Note:** This tool uses the Roblox API. Ensure compliance with Roblox's Terms of Service when uploading content.")
