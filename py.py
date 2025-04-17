@@ -323,6 +323,8 @@ if 'random_names' not in st.session_state:
     st.session_state.random_names = True #Random Names!
 if 'add_transparent_pixel' not in st.session_state:
     st.session_state.add_transparent_pixel = True
+if 'num_to_upload' not in st.session_state:
+    st.session_state.num_to_upload = 10 # upload ten if everything is okay
 
 # ---- Page Functions ----
 def show_account_management_page():
@@ -402,10 +404,10 @@ def show_upload_settings_page():
             st.session_state.image_type = st.selectbox("Image Type", ["image/png", "image/jpeg"])
             st.session_state.add_transparent_pixel = st.checkbox("Add Random Pixel", value=True, help="Adds a random pixel to prevent deletion of the decal")
             st.session_state.random_names = st.checkbox("Use Random Names", value=True, help="Creates random names for the assets")
-
+                
         with col2:
-            st.session_state.naming_option = st.radio("Naming Method", ["Use Filenames", "Custom Naming Pattern", "Custom Names List"])
-        
+            st.session_state.num_to_upload = st.number_input("Max Decals To Upload", min_value=1, max_value=200, value=st.session_state.num_to_upload, step=1, help="The amount of images to upload from source.")
+
         if upload_option == "Upload Image Files":
             st.session_state.uploaded_files = st.file_uploader("Upload image files", accept_multiple_files=True, type=["png", "jpg", "jpeg"])
 
@@ -439,6 +441,8 @@ def show_metadata_settings_page():
     with st.container():
         col1, col2 = st.columns(2)
         with col1:
+            st.session_state.naming_option = st.radio("Naming Method", ["Use Filenames", "Custom Naming Pattern", "Custom Names List"])
+
             if st.session_state.naming_option == "Custom Naming Pattern":
                 st.session_state.name_pattern = st.text_input("Name Pattern (use {index} for numbering)", "My Decal {index}")
             elif st.session_state.naming_option == "Custom Names List":
@@ -501,10 +505,13 @@ def show_upload_page():
                     if len(names_list) < len(files_to_process):
                         st.warning(f"Warning: Only {len(names_list)} names provided for {len(files_to_process)} files. Some files will use default naming.")
 
-                for i, file_item in enumerate(files_to_process):
-                    progress = (i + 1) / len(files_to_process)
+                max_decals = st.session_state.num_to_upload if len(st.session_state.uploaded_files) > st.session_state.num_to_upload else len(st.session_state.uploaded_files)
+
+                for i in range(max_decals):
+                    file_item = files_to_process[i]
+                    progress = (i + 1) / max_decals
                     progress_bar.progress(progress)
-                    status_text.text(f"Processing item {i + 1} of {len(files_to_process)}")
+                    status_text.text(f"Processing item {i + 1} of {max_decals}")
 
                     try:
                         file_name = file_item.name
@@ -645,4 +652,5 @@ with st.container():
             show_upload_page()
 
         # App Note in Footer
-
+        st.markdown("---")
+        st.markdown("**Note:** This tool uses the Roblox API. Ensure compliance with Roblox's Terms of Service when uploading content.")
