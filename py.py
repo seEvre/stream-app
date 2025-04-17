@@ -140,15 +140,21 @@ api_key_method = st.sidebar.radio("API Key Method", ["Enter API Key", "Generate 
 api_key = None
 
 if api_key_method == "Enter API Key":
-    api_key = st.sidebar.text_input("Enter your Roblox API Key", type="password")
+    api_key = st.sidebar.text_input("Enter your Roblox API Key")
 else:
-    cookie = st.sidebar.text_area("Enter your .ROBLOSECURITY cookie", type="password")
+    # Use standard text_area without type parameter
+    st.sidebar.markdown("**Enter your .ROBLOSECURITY cookie (sensitive data)**")
+    cookie = st.sidebar.text_area("Cookie value will be hidden when typing", height=100)
     if st.sidebar.button("Generate API Key"):
         with st.sidebar.spinner("Generating API Key..."):
             api_key = create_api_key(cookie)
             if api_key:
                 st.sidebar.success("API Key generated successfully!")
-                st.sidebar.code(api_key)
+                # Display in a way that can be copied but not immediately visible
+                st.sidebar.markdown("**Your API Key (click to reveal):**")
+                expander = st.sidebar.expander("Show API Key")
+                with expander:
+                    st.code(api_key)
             else:
                 st.sidebar.error("Failed to generate API Key. Check logs for details.")
 
